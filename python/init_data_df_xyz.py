@@ -1,14 +1,20 @@
+#
+# Python script used for cases with non-uniform nk in the xyz directions.
+# Users can use nkx, nky, and nkz instead an equal nk in each dimension. 
+#
+
 import h5py
 import numpy as np
 import os
 from pyscf.df import addons
 
 import common_utils as comm
+import common_utils_xyz as commxyz
 
-args = comm.init_pbc_params()
+args = commxyz.init_pbc_params()
 
 # number of k-points in each direction for Coulomb integrals
-nk       = args.nk ** 3
+nk       = args.nkx * args.nky * args.nkz
 # number of k-points in each direction to evaluate Coulomb kernel
 Nk       = args.Nk
 
@@ -40,7 +46,7 @@ last_ao = atoms_info[:,3]
 print("aoslice_by_atom = ", atoms_info)
 print("Last AO index for each atom = ", last_ao)
 
-kmesh, k_ibz, ir_list, conj_list, weight, ind, num_ik = comm.init_k_mesh(args, mycell)
+kmesh, k_ibz, ir_list, conj_list, weight, ind, num_ik = commxyz.init_k_mesh_xyz(args, mycell)
 
 
 '''
@@ -96,7 +102,7 @@ if args.high_symmetry_path is not None:
     print(kmesh_hs)
     print(mycell.get_scaled_kpts(kmesh_hs))
     inp_data["high_symm_path/k_mesh"] = mycell.get_scaled_kpts(kmesh_hs)
-    inp_data["high_symm_path/r_mesh"] = comm.construct_rmesh(args.nk, args.nk, args.nk) #np.dot(comm.tools.pbc.get_lattice_Ls(mycell), np.linalg.inv(mycell.lattice_vectors()) )
+    inp_data["high_symm_path/r_mesh"] = comm.construct_rmesh(args.nkx, args.nky, args.nkz) #np.dot(comm.tools.pbc.get_lattice_Ls(mycell), np.linalg.inv(mycell.lattice_vectors()) )
     inp_data["high_symm_path/Hk"] = Hk_hs
     inp_data["high_symm_path/Sk"] = Sk_hs
 
