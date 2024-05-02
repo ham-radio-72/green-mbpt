@@ -75,21 +75,15 @@ namespace green::mbpt {
     MatrixXcd            trace_t(1, 1);
     std::complex<double> muomega;
     trace_w              = MatrixXcd::Zero(_nw, 1);
-    size_t loc_loop_size = _nw * _ns * _ink / utils::context.global_size;
-    loc_loop_size += (utils::context.global_rank < (_nw * _ns * _ink % utils::context.global_size)) ? 1 : 0;
-    size_t inkk = (eigenvalues_Sigma_p_F.size()) / (loc_loop_size * _nso);
     for (size_t iwsk = utils::context.global_rank, iii = 0; iwsk < _nw * _ns * _ink; iwsk += utils::context.global_size) {
       size_t iw   = iwsk / (_ns * _ink);
       size_t is   = (iwsk % (_ns * _ink)) / _ink;
       size_t ik   = (iwsk % _ink);
       size_t k_ir = _bz_utils.symmetry().full_point(ik);
       muomega     = _ft.wsample_fermi()(iw) * 1.0i + mu;
-      for (int ikk = 0; ikk < inkk; ++ikk) {
-        // Trace over AO index
-        for (size_t i = 0; i < _nso; ++i, ++iii) {
-          trace_w(iw, 0) +=
-              _bz_utils.nkpw() * _bz_utils.symmetry().weight()[k_ir] * (1.0 / inkk) / (muomega - eigenvalues_Sigma_p_F[iii]);
-        }
+      // Trace over AO index
+      for (size_t i = 0; i < _nso; ++i, ++iii) {
+        trace_w(iw, 0) += _bz_utils.nkpw() * _bz_utils.symmetry().weight()[k_ir] / (muomega - eigenvalues_Sigma_p_F[iii]);
       }
     }
     // Transform to tau
@@ -141,12 +135,13 @@ namespace green::mbpt {
         mu1  = mu;
         nel1 = nel;
       }
+      if(!utils::context.global_rank && _verbose != 0) { std::cout << ss.str() << std::flush; ss.str("");}
       while (std::abs((nel - _nel) / double(_nel)) > _tol && std::abs(mu2 - mu1) > 0.01 * _tol) {
         mu      = (mu1 + mu2) * 0.5;
         nel_old = compute_number_of_electrons(mu, eigenvalues_Sigma_p_F);
         // check if we get stuck in chemical potential search
-        if (std::abs((nel_old - _nel) / double(_nel)) > _tol && std::abs(nel - nel_old) < _tol) {
-          throw mbpt_chemical_potential_search_failure("Chemical potential search failed");
+        if (std::abs((nel_old - _nel) / double(_nel)) > _tol && std::abs(nel - nel_old) < 0.001*_tol) {
+          throw mbpt_chemical_potential_search_failure("Chemical potential search failed.");
         }
         nel = nel_old;
         if (nel > _nel) {
@@ -155,6 +150,7 @@ namespace green::mbpt {
           mu1 = mu;
         }
         if (!utils::context.global_rank && _verbose != 0) ss << "nel:" << nel << " mu: " << mu << std::endl;
+        if (!utils::context.global_rank && _verbose != 0) { std::cout << ss.str() << std::flush; ss.str(""); }
       }
     }
     if (!utils::context.global_rank) {

@@ -47,7 +47,8 @@ namespace green::mbpt {
      */
     gf2_solver(const params::params& p, const grids::transformer_t& tr, const bz_utils_t& bz) :
         _nts(tr.sd().repn_fermi().nts()), _nk(bz.nk()), _ink(bz.ink()), _path(p["dfintegral_file"]),
-        _ewald(p["dfintegral_file"].as<std::string>() != p["dfintegral_hf_file"].as<std::string>()), _bz_utils(bz) {
+        _ewald(p["dfintegral_file"].as<std::string>() != p["dfintegral_hf_file"].as<std::string>()), _bz_utils(bz),
+        statistics("GF2") {
       h5pp::archive ar(p["input_file"]);
       ar["params/nao"] >> _nao;
       ar["params/nso"] >> _nso;
@@ -118,7 +119,7 @@ namespace green::mbpt {
     /**
      * Performs loop over time for fixed set of k-points
      */
-    void      selfenergy_innerloop(const std::array<size_t, 4>& k, size_t is, const ztensor<5>& Gr_full_tau);
+    void      selfenergy_innerloop(size_t tau_offset, size_t ntau_local, const std::array<size_t, 4>& k, size_t is, const ztensor<5>& Gr_full_tau);
 
     MatrixXcd extract_G_tau_k(const ztensor<5>& G_tau, size_t t, size_t k_pos, size_t k_red, size_t s) {
       int         ts_shift = t * G_tau.shape()[1] * G_tau.shape()[2] * _nao * _nao + s * G_tau.shape()[2] * _nao * _nao;
